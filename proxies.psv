@@ -1,0 +1,9 @@
+# this is a comment
+# here you can put your proxies as long as curl accept it you're fine
+# FORMAT:
+# proxy_name|proxy_url
+
+localhost|none
+mylanproxy|http://192.168.1.61:8454
+mysocks5|socks5://user:pass@superprivateandfreeproxy.com:8888
+# another comment
