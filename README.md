@@ -20,7 +20,7 @@ gcc main.c -o proxysee
 
 - run it with the file proxies.psv in the current directory
 ```shell
-proxysee
+./proxysee
 ```
 - or run it passing the path to the file
 ```shell
@@ -36,6 +36,20 @@ proxysee "~/longproxylist.psv"
 - if a proxy contains "localhost" in name or "none" in url it will be 
 - uses ipify.org api you can change it on the line -> IP_API 
 - proxies in proxies.psv must be in the format -> proxy_name|proxy_url
+
+## Use anywhere
+- you can set an alias on your .bashrc 
+- or put in /usr/bin or /usr/local/bin
+```shell
+sudo cp ./proxysee /usr/bin/
+sudo chmod +x /usr/bin/proxysee
+```
+
+Now you can use it anywhere like: 
+```shell
+proxysee "~/longproxylist.psv"
+`` 
+
 
 ### Motivation
 
