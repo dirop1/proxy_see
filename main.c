@@ -3,6 +3,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #define IP_API "https://api.ipify.org"
 
@@ -89,7 +90,7 @@ void executeCmdAndWait(char prepend[], char cmd[], char ip[], double *time){
     t = clock();
     FILE *fp;
     fp = popen(cmd, "r");
-    char buffer[50];
+    char buffer[100];
     if (fp == NULL) {
         printf("Failed to run command\n" );
         strcpy(ip, "error");
@@ -121,42 +122,55 @@ void printIpWithProxy(Proxy proxy, char url[], char ip[], double *time){
     executeCmdAndWait(proxy.name, cmd, ip, time);
 }
 
+void* process_proxy(void* arg) {
+    Proxy* proxy = (Proxy*) arg;
+    if(strncmp(proxy->name, "localhost",6) != 0  ||  strncmp(proxy->url, "none",4) != 0){
+        printIpWithProxy(*proxy, IP_API, proxy->ip, &proxy->time);
+    }else{
+        printIpWithoutProxy(proxy->ip, &proxy->time);
+    }
+    printf("| %15.15s| %15.15s|\t%f|\n", proxy->name , proxy->ip, proxy->time);
+    return NULL;
+}
+
+
 void scanInput(){
     char c;
     scanf(" %c",&c);
     printf("%c",c);
 }
 
-void execProxiesIpFromFile(char filename[]){
+void execProxiesIpFromFileMultiThreaded(char filename[]) {
     clock_t tic;
     tic = clock();
     int maxProxies = countlines(filename);
     printf("Reading %s with %d lines:\n", filename, maxProxies);
     Proxy proxies[maxProxies];
+    pthread_t threads[maxProxies];
 
-    readProxyFile(proxies, filename);
-    for (int i = 0; i < maxProxies; ++i) {
-        if(strncmp(proxies[i].name, "localhost",6) != 0  ||  strncmp(proxies[i].url, "none",4) != 0){
-            printIpWithProxy(proxies[i], IP_API, proxies[i].ip, &proxies[i].time);
-        }else{
-            printIpWithoutProxy(proxies[i].ip, &proxies[i].time);
-        }
-        printf(" %d -", i);
-    }
     printf("\n--------------  -----Results----  ---------------\n");
     printf("._______________________________________________.\n");
     printf("| %15.15s| %15.15s|%13.13s|\n", "NAME", "IP", "      Time");
     printf("|________________|________________|_____________|\n");
+
+    readProxyFile(proxies, filename);
+
     for (int i = 0; i < maxProxies; ++i) {
-        printf("| %15.15s| %15.15s|\t%f|\n", proxies[i].name , proxies[i].ip, proxies[i].time);
+        pthread_create(&threads[i], NULL, process_proxy, &proxies[i]);
     }
+
+    // wait for all threads to finish
+    for (int i = 0; i < maxProxies; ++i) {
+        pthread_join(threads[i], NULL);
+    }
+
+
     tic = clock() - tic;
     double total_time = ((double) tic) / CLOCKS_PER_SEC;
 
     printf("|-----------------------------------------------|\n");
     printf("|  %15.15s%15.15d\t%f|\n","TOTAL:|", maxProxies, total_time);
     printf("|_______________________________________________|\n");
-
 }
 
 
@@ -172,7 +186,7 @@ int main( int argc, char *argv[] ) {
     }
     
     if(access(filelocation, F_OK) == 0){
-        execProxiesIpFromFile(filelocation);
+        execProxiesIpFromFileMultiThreaded(filelocation);
         exit(0);
     }else{
         printf("\nError\nCouldn't find the proxies.psv file create one in this location or pass it as an argument\n\n");
